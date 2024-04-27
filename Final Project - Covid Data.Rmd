@@ -1,0 +1,231 @@
+---
+title: "JH_Covid_Data"
+output: pdf_document
+date: "2024-04-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+Welcome to my final project; a brief look at the Covid-19 dataset published by Johns Hopkins.  My goal with this project
+will be to take the messy COVID-19 data supplied by JH, and turn it into insights by using R to manipulate data and
+create elucidating plots.
+
+
+
+## Load Required Packages
+
+First things first, some packages are required to work with this data:
+```{r load packages, echo=TRUE, message=FALSE}
+  library(tidyverse)
+  library(maps)
+  library(readxl)
+```
+
+
+
+## Importing Data
+
+Now, I import the dataset into R with the below commands:
+```{r Import Data, message=FALSE}
+##Setup character strings of the url parts to work with later and declare some variables for later use  
+  url_beginning <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/"
+  list_of_url_ends <- c("time_series_covid19_confirmed_global.csv","time_series_covid19_deaths_global.csv","time_series_covid19_confirmed_US.csv","time_series_covid19_deaths_US.csv")
+  urls = c()
+  i = 1
+  
+## Loop over each url ending to build full URL's to pull later
+  while(i <= length(list_of_url_ends))
+  {
+    urls[i] = paste0(url_beginning,list_of_url_ends[i])
+    i <- i + 1
+  }
+  
+## Pull Data into discrete dataframes
+  global_cases <- read_csv(urls[1])
+  global_deaths <- read_csv(urls[2])
+  us_cases <- read_csv(urls[3])
+  us_deaths <- read_csv(urls[4])
+```
+
+
+
+## Tidying Data
+
+This data is formatted in a way that is difficult to work with, see the below code output which illustrates this point with the global data
+
+```{r dataframe view}
+  size_1 <- dim(us_cases)
+  print(paste0("Columns = ", size_1[2]))
+  head(us_cases[,100:105])
+```
+
+The above shows that there are 1154 columns.  Displaying some random 6 columns, I can see that many columns represent a single day.
+I'll have to transform this data into a more usable format, and tidy it up some.  This data will represent the sum of cases for all areas
+by state/province (where available), country, and date.  The below code wil ldo this transformation and tidying, followed up by displaying
+5 random results from each table.
+
+### Transforming Data
+
+I have commented out the code that transforms the global data, but left it in for possible later use.
+```{r transform_data, message= FALSE}
+# ##fix up global_cases
+#   global_cases <- pivot_longer(global_cases,cols = -c('Province/State','Country/Region'), names_to = 'Date', values_to = 'Cases')
+#   global_cases$Date <- as.Date(global_cases$Date,"%m/%d/%y")
+#   colnames(global_cases)[1:2] <- c('Province_State','Country_Region')
+#   global_cases_by_Region <- group_by(global_cases, Province_State, Country_Region, Date)
+#   global_cases_by_Region <- summarize(global_cases_by_Region,sum(Cases))
+#   global_cases_by_Region$`sum(Cases)` <- as.integer(global_cases_by_Region$`sum(Cases)`)
+#   colnames(global_cases_by_Region)[4] <- 'Total_Cases'
+#   global_cases_by_Region <- global_cases_by_Region[!is.na(global_cases_by_Region$Date),]
+#   global_cases_by_Region[sample(1:nrow(global_cases_by_Region),5),]
+# ##fix up global_deaths
+#   global_deaths <- pivot_longer(global_deaths,cols = -c('Province/State','Country/Region'), names_to = 'Date', values_to = 'Deaths')
+#   global_deaths$Date <- as.Date(global_deaths$Date,"%m/%d/%y")
+#   colnames(global_deaths)[1:2] <- c('Province_State','Country_Region')
+#   global_deaths_by_Region <- group_by(global_deaths, Province_State, Country_Region, Date)
+#   global_deaths_by_Region <- summarize(global_deaths_by_Region,sum(Deaths))
+#   global_deaths_by_Region$`sum(Deaths)` <- as.integer(global_deaths_by_Region$`sum(Deaths)`)
+#   colnames(global_deaths_by_Region)[4] <- 'Total_Deaths'
+#   global_deaths_by_Region <- global_deaths_by_Region[!is.na(global_deaths_by_Region$Date),]
+#   global_deaths_by_Region[sample(1:nrow(global_deaths_by_Region),5),]
+##fix up us_cases  
+  us_cases <- us_cases[,-match(c('UID','iso2','iso3','code3','FIPS','Admin2','Combined_Key'),names(us_cases))]
+  us_cases <- pivot_longer(us_cases,cols = -c('Province_State','Country_Region'), names_to = 'Date', values_to = 'Cases')
+  us_cases$Date <- as.Date(us_cases$Date,"%m/%d/%y")
+  us_cases_by_Region <- group_by(us_cases, Province_State, Country_Region, Date)
+  us_cases_by_Region <- summarize(us_cases_by_Region,sum(Cases))
+  us_cases_by_Region$`sum(Cases)` <- as.integer(us_cases_by_Region$`sum(Cases)`)
+  colnames(us_cases_by_Region)[4] <- 'Total_Cases'
+  us_cases_by_Region <- us_cases_by_Region[!is.na(us_cases_by_Region$Date),]
+  us_cases_by_Region[sample(1:nrow(us_cases_by_Region),5),]
+##fix up us_deaths
+  us_deaths <- us_deaths[,-match(c('UID','iso2','iso3','code3','FIPS','Admin2','Combined_Key'),names(us_deaths))]
+  us_deaths <- pivot_longer(us_deaths,cols = -c('Province_State','Country_Region'), names_to = 'Date', values_to = 'Deaths')
+  us_deaths$Date <- as.Date(us_deaths$Date,"%m/%d/%y")
+  us_deaths_by_Region <- group_by(us_deaths, Province_State, Country_Region, Date)
+  us_deaths_by_Region <- summarize(us_deaths_by_Region,sum(Deaths))
+  us_deaths_by_Region$`sum(Deaths)` <- as.integer(us_deaths_by_Region$`sum(Deaths)`)
+  colnames(us_deaths_by_Region)[4] <- 'Total_Deaths'
+  us_deaths_by_Region <- us_deaths_by_Region[!is.na(us_deaths_by_Region$Date),]
+  us_deaths_by_Region[sample(1:nrow(us_deaths_by_Region),5),]
+```
+
+## Analysis
+
+Lets learn something about which states were impacted the worst from Covid.
+
+### Deaths per State
+
+```{r max deaths, message=FALSE}
+##Lets find the total deaths by state
+  us_max_deaths_region <- group_by(us_deaths_by_Region, Province_State, Country_Region) %>% summarise(max(Total_Deaths))
+  colnames(us_max_deaths_region)[3] <- 'Max_Deaths'
+
+```
+
+Lets see if this data shown on a map of the USA can give us any insights.
+
+```{r, message=FALSE}
+  #See link for tutorial followed for this part https://sarahpenir.github.io/r/making-maps/
+  USA <- map_data("state")
+  USA$region = str_to_title(USA$region)
+  USA$region <- recode(USA$region,"District Of Columbia"="District of Columbia")
+  
+  ##Now join the US map data to it
+  colnames(us_max_deaths_region)[1] <- 'region'
+  us_joined <- inner_join(USA, us_max_deaths_region,by='region')
+
+  ##Plot this data
+  Covid_Deaths_USA <- ggplot(data = us_joined, mapping = aes(x = long, y = lat, group = group)) + 
+    coord_fixed(1.3) +
+    geom_polygon(aes(fill = Max_Deaths)) +
+    scale_fill_distiller(palette ="Reds", direction = 1) + # or direction=1
+    ggtitle("US COVID Deaths by State")
+  
+  Covid_Deaths_USA
+```
+
+### Death Rate per State
+
+It seems that California, Texas, Florida and New York have the most deaths.  But this is expected
+given those states have relatively high populations.  A more valuable insight would require each state's
+death count by number of cases.  Lets get that data into one place and put it on this chart
+
+
+```{r death rate, message = FALSE}
+  us_max_cases_region <- group_by(us_cases_by_Region, Province_State, Country_Region) %>% summarise(max(Total_Cases))
+  colnames(us_max_cases_region)[3] <- 'Max_Cases'
+  colnames(us_max_cases_region)[1] <- 'region'
+  us_joined_deaths_cases <- inner_join(us_joined, us_max_cases_region,by='region')
+  us_joined_deaths_cases <- mutate(us_joined_deaths_cases, Death_Rate = Max_Deaths*100/Max_Cases)
+  
+  #Plot
+  Covid_Death_Rate_USA <- ggplot(data = us_joined_deaths_cases, mapping = aes(x = long, y = lat, group = group)) + 
+  coord_fixed(1.3) +
+  geom_polygon(aes(fill = Death_Rate)) +
+  scale_fill_distiller(palette ="Reds", direction = 1) +
+  ggtitle("US COVID Death Rate by State")
+  
+  Covid_Death_Rate_USA
+```
+
+From this chart, you an see that the states with the highest death counts were not in fact
+the states with the highest death rate.  There is not much that stands out from this 
+other than states with low populations also tend to have low death rates (but not always).
+
+
+## Modeling Data
+
+I would expect that population would have a lot to do with number of people infected.
+So, lets pull in some data on population by state and see if that variable is correlated to 
+total number of cases or not.
+
+
+```{r pull pop data, message=FALSE, warning=FALSE}
+#Get and fix data from census borough  
+  my_url <- "https://www2.census.gov/programs-surveys/popest/tables/2020-2023/state/totals/NST-EST2023-POP.xlsx"
+  curl::curl_download(my_url,'data.xlsx',mode = "wb")
+  pop_data <- read_xlsx('data.xlsx')
+  pop_data <- pop_data[,c(1,6)]
+  colnames(pop_data) <- c('region','Population')
+  pop_data <- pop_data[!is.na(pop_data[,1]),]
+  pop_data <- pop_data[!is.na(pop_data[,2]),]
+  pop_data <- slice_tail(pop_data,n=nrow(pop_data)-6)
+  pop_data <- mutate(pop_data,across(c('region'),substr,2,nchar(region)))
+  
+#Combine data with cases and plot
+  max_cases_pop <- inner_join(pop_data, us_max_cases_region,by='region')
+  ggplot(max_cases_pop, aes(x = Population, y = Max_Cases)) + 
+    geom_point()
+
+```
+
+
+As can be seen by the above plot, the modeled variable does line up linearly with the 
+predictor.
+
+
+## Conclusion
+
+The data pulled from the Johns Hopkins Covid-19 dataset gave an interesting look
+at the total number of cases, death rates, and the correlation between infection and
+population by state.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
